@@ -23,7 +23,7 @@ public class CardBartok : Card
     static public float CARD_HEIGHT = 3.5f;
     static public float CARD_WIDTH = 2f;
 
-    [Header("set Dynamically: CardBartok")]
+    [Header("Set Dynamically: CardBartok")]
     public CBState state = CBState.drawpile;
 
     //fields to store info the card will use to move and rotate
@@ -43,14 +43,14 @@ public class CardBartok : Card
         // current
         bezierPts = new List<Vector3>();
         bezierPts.Add(transform.localPosition);
-        bezierPts.Add(ePos);
+        bezierPts.Add( ePos );
 
         // new
         bezierRots = new List<Quaternion>();
         bezierRots.Add(transform.rotation);
-        bezierRots.Add(eRot);
+        bezierRots.Add( eRot );
 
-        if(timeStart == 0)
+        if (timeStart == 0)
         {
             timeStart = Time.time;
         }
@@ -64,11 +64,11 @@ public class CardBartok : Card
     {
         MoveTo(ePos, Quaternion.identity);
     }
-    
-	// Update is called once per frame
-	void Update ()
+
+    // Update is called once per frame
+    void Update()
     {
-		switch(state)
+        switch (state)
         {
             case CBState.toHand:
             case CBState.toTarget:
@@ -77,13 +77,13 @@ public class CardBartok : Card
                 float u = (Time.time - timeStart) / timeDuration;
                 float uC = Easing.Ease(u, MOVE_EASING);
 
-                if(u < 0)
+                if (u < 0)
                 {
                     transform.localPosition = bezierPts[0];
                     transform.rotation = bezierRots[0];
                     return;
                 }
-                else if(u >= 1)
+                else if (u >= 1)
                 {
                     uC = 1;
 
@@ -94,19 +94,17 @@ public class CardBartok : Card
                     if (state == CBState.to) state = CBState.idle;
 
                     // move to the final pos
-                    transform.localPosition = bezierPts[bezierPts.Count - 1];
-                    transform.rotation = bezierRots[bezierPts.Count - 1];
+                    transform.localPosition = bezierPts[bezierPts.Count-1];
+                    transform.rotation = bezierRots[bezierPts.Count-1];
 
                     // reset timeStart to 0 so it gets overwritten next time
                     timeStart = 0;
 
-                    if(reportFinishTo != null)
+                    if (reportFinishTo != null)
                     {
                         reportFinishTo.SendMessage("CBCallback", this);
                         reportFinishTo = null;
-                    }
-                    else
-                    {
+                    } else {
                         // if there is nothing to callback, keep it still
                     }
                 }
@@ -115,10 +113,11 @@ public class CardBartok : Card
                     // normal interpolation behavior (0 <= u <= 1)
                     Vector3 pos = Utils.Bezier(uC, bezierPts);
                     transform.localPosition = pos;
+
                     Quaternion rotQ = Utils.Bezier(uC, bezierRots);
                     transform.rotation = rotQ;
                 }
                 break;
         }
-	}
+    }
 }

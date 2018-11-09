@@ -11,22 +11,26 @@ public class SlotDef
     public string layerName = "Default";
     public int layerID = 0;
     public int id;
-    public List<int> hiddenBy = new List<int>();
+    public List<int> hiddenBy = new List<int>();    // unused
+    public float rot;
     public string type = "slot";
     public Vector2 stagger;
+    public int player;      // player # of a hand
+    public Vector3 pos;     // pos derived from x, y, & multiplier
 }
 
-public class Layout : MonoBehaviour
+public class BartokLayout : MonoBehaviour
 {
+    [Header("Set Dynamically")]
     public PT_XMLReader xmlr;
     public PT_XMLHashtable xml;
-    public Vector2 multiplier;      // the offset of the tableau's center 
+    public Vector2 multiplier;      // sets the spacing of the tableau's 
+
     // SlotDef refs
     public List<SlotDef> slotDefs;  // all the SlotDefs for Row0-Row3
     public SlotDef drawPile;
     public SlotDef discardPile;
-    // this holds all of the possible names for the layers set by layerId
-    public string[] sortingLayerNames = new string[] { "Row0", "Row1", "Row2", "Row3", "Discard", "Draw" };
+    public SlotDef target;
 
     public void ReadLayout(string xmlText)
     {
@@ -58,24 +62,16 @@ public class Layout : MonoBehaviour
             // various attributes are parsed in numerical values
             tSD.x = float.Parse(slotsX[i].att("x"));
             tSD.y = float.Parse(slotsX[i].att("y"));
+            tSD.pos = new Vector3(tSD.x * multiplier.x, tSD.y * multiplier.y, 0);
+
+            // sorting layers
             tSD.layerID = int.Parse(slotsX[i].att("layer"));
-            // conerts the number of the layerID into a text layerName
-            tSD.layerName = sortingLayerNames[tSD.layerID];
+            tSD.layerName = tSD.layerID.ToString();
 
             switch(tSD.type)
             {
                 case "slot":
-                    tSD.faceUp = (slotsX[i].att("faceup") == "1");
-                    tSD.id = int.Parse(slotsX[i].att("id"));
-                    if(slotsX[i].HasAtt("hiddenby"))
-                    {
-                        string[] hiding = slotsX[i].att("hiddenby").Split(',');
-                        foreach(string s in hiding)
-                        {
-                            tSD.hiddenBy.Add(int.Parse(s));
-                        }
-                    }
-                    slotDefs.Add(tSD);
+                    // ignore slots of type "slot"
                     break;
 
                 case "drawpile":
@@ -86,17 +82,17 @@ public class Layout : MonoBehaviour
                 case "discaredpile":
                     discardPile = tSD;
                     break;
+
+                case "target":
+                    target = tSD;
+                    break;
+
+                case "hand":
+                    tSD.player = int.Parse(slotsX[i].att("player"));
+                    tSD.rot = float.Parse(slotsX[i].att("rot"));
+                    slotDefs.Add(tSD);
+                    break;
             }
         }
     }
-
-    // Use this for initialization
-    void Start () {
-		
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
-	}
 }

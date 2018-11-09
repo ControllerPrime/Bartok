@@ -3,15 +3,28 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+// enum contains different phases of a game turn
+public enum TurnPhase
+{
+    idle,
+    pre,
+    waiting,
+    post,
+    gameOver
+}
+
 public class Bartok : MonoBehaviour
 {
     static public Bartok S;
+    static public Player CURRENT_PLAYER;
 
     [Header("set in Inspector")]
     public TextAsset deckXML;
     public TextAsset layoutXML;
     public Vector3 layoutCenter = Vector3.zero;
     public float handFanDegrees = 10f;
+    public int numStartingCards = 7;
+    public float drawTimeStagger = 0.1f;
 
     [Header("Set Dynamically")]
     public Deck deck;
@@ -19,6 +32,7 @@ public class Bartok : MonoBehaviour
     public List<CardBartok> discardPile;
     public List<Player> players;
     public CardBartok targetCard;
+    public TurnPhase phase = TurnPhase.idle;
 
     private BartokLayout layout;
     private Transform layoutAnchor;
@@ -94,6 +108,117 @@ public class Bartok : MonoBehaviour
             p1.playerNum = tSD.player;
         }
         players[0].type = PlayerType.human;         // make only the 0th player human
+
+        CardBartok tCB;
+
+        // deal 7 cards to each player
+        for( int i = 0; i < numStartingCards; i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                tCB = Draw();
+                tCB.timeStart = Time.time + drawTimeStagger * (i * 4 + j);
+
+                players[(j + 1) % 4].AddCard(tCB);
+            }
+        }
+        Invoke("DrawFirstTarget", drawTimeStagger * (numStartingCards * 4 + 4));
+    }
+
+    public void DrawFirstTarget()
+    {
+        // flip up the first card from the dP
+        CardBartok tCB = MoveToTarget(Draw());
+
+        // set the CardBartok to call cbcallback on this Bartok when it's done
+        tCB.reportFinishTo = this.gameObject;
+    }
+
+    // this callback is used by the last card to be dealt at the beginning
+    public void CBCallback(CardBartok cb)
+    {
+        Utils.tr("Bartok: CBCallback()", cb.name);
+        StartGame();
+    }
+
+    public void StartGame()
+    {
+        // the player on the left of the human goes first
+        PassTurn(1);
+    }
+
+    public void PassTurn(int num = -1)
+    {
+        // if no number was passed in, pick the next player
+        if(num == -1)
+        {
+            int ndx = players.IndexOf(CURRENT_PLAYER);
+            num = (ndx + 1) % 4;
+        }
+
+        int lastPlayerNum = -1;
+        if(CURRENT_PLAYER != null)
+        {
+            lastPlayerNum = CURRENT_PLAYER.playerNum;
+        }
+
+        CURRENT_PLAYER = players[num];
+        phase = TurnPhase.pre;
+
+        Utils.tr("Bartok: PassTurn()", "Old: " + lastPlayerNum,
+                 "New: " + CURRENT_PLAYER.playerNum);
+    }
+
+    // method veries that the card chosen can be played on the dP
+    public bool ValidPlay(CardBartok cb)
+    {
+        // its valid if the rank is the same
+        if(cb.rank == targetCard.rank)
+        {
+            return (true);
+        }
+
+        // its valid if the suit is the same
+        if (cb.suit == targetCard.suit)
+        {
+            return (true);
+        }
+
+        // if neither
+        return (false);
+    }
+
+
+    // this makes a new card the target
+    public CardBartok MoveToTarget(CardBartok tCB)
+    {
+        tCB.timeStart = 0;
+        tCB.MoveTo(layout.discardPile.pos + Vector3.back);
+        tCB.state = CBState.toTarget;
+        tCB.faceUp = true;
+
+        tCB.SetSortingLayerName("10");
+        tCB.eventualSortLayer = layout.target.layerName;
+        if(targetCard != null)
+        {
+            MoveToDiscard(targetCard);
+        }
+
+        targetCard = tCB;
+
+        return (tCB);
+    }
+
+    // this makes a new card the target
+    public CardBartok MoveToDiscard(CardBartok tCB)
+    {
+        tCB.state = CBState.discard;
+        discardPile.Add(tCB);
+        tCB.SetSortingLayerName(layout.discardPile.layerName);
+        tCB.SetSortOrder(discardPile.Count * 4);
+        tCB.transform.localPosition = layout.discardPile.pos + Vector3.back / 2;
+
+        return (tCB);
     }
 
     // the draw function will pull asingle card from the drawPile and return it
@@ -104,7 +229,8 @@ public class Bartok : MonoBehaviour
         return (cd);
     }
 
-    // this Update() is temporarily used to test adding cards to players' hands
+
+    /** this Update() is temporarily used to test adding cards to players' hands
     private void Update()
     {
         if(Input.GetKeyDown(KeyCode.Alpha1))
@@ -124,6 +250,7 @@ public class Bartok : MonoBehaviour
             players[3].AddCard(Draw());
         }
     }
+    */
 }
 
 

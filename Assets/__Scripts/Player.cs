@@ -24,6 +24,23 @@ public class Player
 
         // add the card to the hand
         hand.Add(eCB);
+
+        // sort the cards by rank using LINQ if this is a human
+        if (type == PlayerType.human)
+        {
+            CardBartok[] cards = hand.ToArray();
+
+            // this is the LINQ call
+            cards = cards.OrderBy(cd => cd.rank).ToArray();
+
+            hand = new List<CardBartok>(cards);
+
+            // the LINQ operations can be a slow, but since we're only doing it once every round, it's not an issue
+        }
+
+        eCB.SetSortingLayerName("10");
+        eCB.eventualSortLayer = handSlotDef.layerName;
+
         FanHand();
         return (eCB);
     }
@@ -66,15 +83,22 @@ public class Player
             pos += handSlotDef.pos;
             pos.z = -0.5f * i;
 
-            // set the localPos and rotation of the ith card in the hand\
+            // set the localPos and rotation of the ith card in the hand
+            hand[i].MoveTo(pos, rotQ);      // told to interpolate
+            hand[i].state = CBState.toHand;
+
+            /**
             hand[i].transform.localPosition = pos;
             hand[i].transform.rotation = rotQ;
             hand[i].state = CBState.hand;
+            */
 
             hand[i].faceUp = (type == PlayerType.human);
 
             // set the SetOrder of the cards so that they overlap properly
-            hand[i].SetSortOrder(i * 4);
+            //hand[i].SetSortOrder(i * 4);
+            hand[i].eventualSortOrder = i * 4;
+
         }
     }
 }

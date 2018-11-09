@@ -30,6 +30,8 @@ public class CardBartok : Card
     public List<Vector3> bezierPts;
     public List<Quaternion> bezierRots;
     public float timeStart, timeDuration;
+    public int eventualSortOrder;
+    public string eventualSortLayer;
 
     // when the card is done moving, it will call reportFinishTo.SendMessage()
     public GameObject reportFinishTo = null;
@@ -54,6 +56,7 @@ public class CardBartok : Card
         {
             timeStart = Time.time;
         }
+
         // timeDuration always starts the same but can be overwritten
         timeDuration = MOVE_DURATION;
 
@@ -88,10 +91,10 @@ public class CardBartok : Card
                     uC = 1;
 
                     // move from the to state to... the proper next state
-                    if (state == CBState.toHand) state = CBState.hand;
-                    if (state == CBState.toTarget) state = CBState.target;
-                    if (state == CBState.toDrawpile) state = CBState.drawpile;
-                    if (state == CBState.to) state = CBState.idle;
+                    if (state == CBState.toHand)        state = CBState.hand;
+                    if (state == CBState.toTarget)      state = CBState.target;
+                    if (state == CBState.toDrawpile)    state = CBState.drawpile;
+                    if (state == CBState.to)            state = CBState.idle;
 
                     // move to the final pos
                     transform.localPosition = bezierPts[bezierPts.Count-1];
@@ -116,6 +119,22 @@ public class CardBartok : Card
 
                     Quaternion rotQ = Utils.Bezier(uC, bezierRots);
                     transform.rotation = rotQ;
+
+                    if (u > 0.5f)
+                    {
+                        SpriteRenderer sRend = spriteRenderers[0];
+                        if(sRend.sortingOrder != eventualSortOrder)
+                        {
+                            // jump to the proper sort order
+                            SetSortOrder(eventualSortOrder);
+                        }
+
+                        if (sRend.sortingLayerName != eventualSortLayer)
+                        {
+                            // jump to the proper sort layer
+                            SetSortingLayerName(eventualSortLayer);
+                        }
+                    }
                 }
                 break;
         }

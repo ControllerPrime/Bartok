@@ -115,8 +115,6 @@ public class Utils : MonoBehaviour
         throw new NotImplementedException();
     }
 
-
-
     // Test to see whether Bounds are on screen.
     public static Vector3 ScreenBoundsCheck(Bounds bnd, BoundsTest test = BoundsTest.center)
     {

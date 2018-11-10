@@ -36,6 +36,9 @@ public class CardBartok : Card
     // when the card is done moving, it will call reportFinishTo.SendMessage()
     public GameObject reportFinishTo = null;
 
+    [System.NonSerialized]
+    public Player callbackPlayer = null;
+
     //MoveTo tells the card to interpolate to a new pos and rotation
     public void MoveTo(Vector3 ePos, Quaternion eRot)
     {
@@ -107,7 +110,15 @@ public class CardBartok : Card
                     {
                         reportFinishTo.SendMessage("CBCallback", this);
                         reportFinishTo = null;
-                    } else {
+                    }
+                    else if (callbackPlayer != null)
+                    {
+                        // if theres a callback player, call directly on the player
+                        callbackPlayer.CBCallback(this);
+                        callbackPlayer = null;
+                    }
+                    else
+                    {
                         // if there is nothing to callback, keep it still
                     }
                 }
@@ -138,5 +149,12 @@ public class CardBartok : Card
                 }
                 break;
         }
+    }
+
+    public override void OnMouseUpAsButton()
+    {
+        // call the CardClicked method on the B.S
+        Bartok.S.CardClicked(this);
+        base.OnMouseUpAsButton();
     }
 }

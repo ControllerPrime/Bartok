@@ -160,13 +160,53 @@ public class Bartok : MonoBehaviour
         if(CURRENT_PLAYER != null)
         {
             lastPlayerNum = CURRENT_PLAYER.playerNum;
+
+            if(CheckForGameOver())
+            {
+                return;
+            }
         }
 
         CURRENT_PLAYER = players[num];
         phase = TurnPhase.pre;
 
+
+        CURRENT_PLAYER.TakeTurn();
+
         Utils.tr("Bartok: PassTurn()", "Old: " + lastPlayerNum,
                  "New: " + CURRENT_PLAYER.playerNum);
+    }
+
+    public bool CheckForGameOver()
+    {
+        // see if we need to reshuffle the disP into the draP
+        if(drawPile.Count == 0)
+        {
+            List<Card> cards = new List<Card>();
+            foreach(CardBartok cb in discardPile)
+            {
+                cards.Add(cb);
+            }
+            discardPile.Clear();
+            Deck.Shuffle(ref cards);
+            drawPile = UpgradeCardsList(cards);
+            ArrangeDrawPile();
+        }
+
+        // check to see if the current player has won
+        if(CURRENT_PLAYER.hand.Count == 0)
+        {
+            phase = TurnPhase.gameOver;
+            Invoke("RestartGame", 1);
+            return (true);
+        }
+        return (false);
+    }
+
+    public void RestartGame()
+    {
+        CURRENT_PLAYER = null;
+        SceneManager.LoadScene("__Bartok_Scene_0");
     }
 
     // method veries that the card chosen can be played on the dP
@@ -225,8 +265,77 @@ public class Bartok : MonoBehaviour
     public CardBartok Draw()
     {
         CardBartok cd = drawPile[0];
+
+        if(drawPile.Count == 0)
+        {
+            // need to shuffle the discards into the drawPile
+            int ndx;
+
+            while(discardPile.Count > 0)
+            {
+                ndx = Random.Range(0, discardPile.Count);
+                drawPile.Add(discardPile[ndx]);
+                discardPile.RemoveAt(ndx);
+            }
+
+            ArrangeDrawPile();
+            // show the cards moving to drawPile
+            float t = Time.time;
+            foreach(CardBartok tCB in drawPile)
+            {
+                tCB.transform.localPosition = layout.discardPile.pos;
+                tCB.callbackPlayer = null;
+                tCB.MoveTo(layout.drawPile.pos);
+                tCB.timeStart = t;
+                t += 0.02f;
+                tCB.state = CBState.toDrawpile;
+                tCB.eventualSortLayer = "0";
+            }
+        }
+
         drawPile.RemoveAt(0);
         return (cd);
+    }
+
+    public void CardClicked(CardBartok tCB)
+    {
+        if(CURRENT_PLAYER.type != PlayerType.human)
+        {
+            return;
+        }
+
+        if(phase == TurnPhase.waiting)
+        {
+            return;
+        }
+
+        switch(tCB.state)
+        {
+            case CBState.drawpile:
+                // draw the top card
+                CardBartok cb = CURRENT_PLAYER.AddCard(Draw());
+                cb.callbackPlayer = CURRENT_PLAYER;
+                Utils.tr("Bartok: CardClicked()", "Draw", cb.name);
+                phase = TurnPhase.waiting;
+                break;
+
+            case CBState.hand:
+                // check to see whether the card is valid
+                if (ValidPlay(tCB))
+                {
+                    CURRENT_PLAYER.RemoveCard(tCB);
+                    MoveToTarget(tCB);
+                    tCB.callbackPlayer = CURRENT_PLAYER;
+                    Utils.tr("Bartok:CardClicked()", "Play", tCB.name, targetCard.name + " is target");
+                    phase = TurnPhase.waiting;
+                }
+                else
+                {
+                    // ignore but report when tried
+                    Utils.tr("Bartok.CardClicked()", "Attempted to Play", tCB.name, targetCard.name + " is target");
+                }
+                break;
+        }
     }
 
 
